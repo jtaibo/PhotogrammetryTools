@@ -12,7 +12,7 @@ os.environ["PATH"] = "U:/ffmpeg/bin;" + os.environ["PATH"]
 
 parser = argparse.ArgumentParser("extract_images")
 parser.add_argument("input_video", help="Path for the video to split into frames", default="")
-parser.add_argument("exif_ref", help="Path to the image with the EXIF metadata to populate the frames extracted from the video", default="")
+parser.add_argument("--exif_ref", help="Path to the image with the EXIF metadata to populate the frames extracted from the video")
 parser.add_argument("--folder", help="Path to folder where to place the extracted frames")
 parser.add_argument("--framePrefix", help="Frame file name prefix")
 
@@ -35,6 +35,14 @@ def getVideoInfo(video_path):
     duration = frameCount / fps
     video.release()
     return {"width": width, "height":height, "frameCount": frameCount, "fps": fps, "duration": duration}
+
+
+###############################################################################
+#   Extract EXIF metadata from video and copy it to extracted frames
+###############################################################################
+def copyEXIFFromVideo(input_file, output_name, frames_folder):
+    # EXPERIMENTAL
+    pass
 
 
 ###############################################################################
@@ -63,6 +71,8 @@ def extractFrames(input_file, output_name, frames_folder):
     cmd = "ffmpeg -ss " + str(START_TIME) + " -t " + str(DURATION) + " -i \"" + input_file + "\" -r " + str(FRAME_STEP) + " " + frames_folder + "/" + output_name + "%04d." + EXTENSION
     os.system(cmd)
     #print(cmd)
+
+    copyEXIFFromVideo(input_file, output_name, frames_folder)
 
 ###############################################################################
 #
@@ -100,7 +110,7 @@ def addExifInfo(frames_list, exif_ref):
 
     for filepath in frames_list:
         print("Adding EXIF metadata to " + filepath)
-        cmd = exiftool_bin + " -overwrite_original -TagsFromFile " + metadata_source + " " + filepath
+        cmd = exiftool_bin + " -overwrite_original -TagsFromFile \"" + metadata_source + "\" \"" + filepath + "\""
         #print(cmd)
         os.system(cmd)
         #print(filepath)
@@ -201,6 +211,7 @@ def main():
     # Filter images (considering blurriness and difference with previous image)
     filterImages(getFramesInFolder(frames_folder))
 
-    addExifInfo(getFramesInFolder(frames_folder), args.exif_ref)
+    if args.exif_ref:
+        addExifInfo(getFramesInFolder(frames_folder), args.exif_ref)
 
 main()
