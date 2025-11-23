@@ -149,8 +149,8 @@ def addExifInfo(frames_list, exif_ref):
         et.set_tags( frames_list,
                     tags={"make": make,
                           "model": model,
-                          "focalLength": focal_length}
-                          #"serialNumber": serial_number}
+                          "focalLength": focal_length},
+                          #"serialNumber": serial_number},
                     params=["-overwrite_original"]
         )
 
