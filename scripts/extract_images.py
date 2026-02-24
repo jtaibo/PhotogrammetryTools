@@ -21,6 +21,7 @@ parser.add_argument("--exif_ref", help="Path to the image with the EXIF metadata
 parser.add_argument("--folder", help="Path to folder where to place the extracted frames")
 parser.add_argument("--framePrefix", help="Frame file name prefix")
 parser.add_argument("--frameScale", help="Scaling factor for extracted frames", default=1)
+parser.add_argument("--fps", help="Frames per second to extract (0=all frames)", default=0)
 
 # TO-DO
 # Keep all frames (raw, filtered)
@@ -69,14 +70,14 @@ def copyEXIFFromVideo(input_file, output_name, frames_folder):
 #
 #   TO-DO: expose parameters (start time, duration, fps, resolution, ...)
 ###############################################################################
-def extractFrames(input_file, output_name, frames_folder, scale):
+def extractFrames(input_file, output_name, frames_folder, scale, fps=0):
    
     # Create a new directory to avoid messing up too much
     if os.path.isdir(frames_folder):
         print("Frames have already been extracted. Stopping now")
         os.abort()
-
-    os.mkdir(frames_folder)
+    else:
+        os.mkdir(frames_folder)
 
     vinfo = getVideoInfo(input_file)
 
@@ -87,10 +88,21 @@ def extractFrames(input_file, output_name, frames_folder, scale):
     FRAME_STEP=vinfo["fps"]
     EXTENSION="jpg"
 
+    if int(fps) > 0:
+        FRAME_STEP=fps
+
     SCALE=scale
 
-    cmd = "ffmpeg -ss " + str(START_TIME) + " -t " + str(DURATION) + " -i \"" + input_file + "\" -r " + str(FRAME_STEP) + " -vf scale=\"iw*" + str(SCALE) + ":ih*" + str(SCALE) +"\" " + frames_folder + "/" + output_name + "%04d." + EXTENSION
-    os.system(cmd)
+    ext = os.path.splitext(input_file)[1]
+    if ext == ".insv":
+        # Insta360 (2 video tracks, fisheye)
+        cmd = "ffmpeg -ss " + str(START_TIME) + " -t " + str(DURATION) + " -i \"" + input_file + "\" -r " + str(FRAME_STEP) + " -vf scale=\"iw*" + str(SCALE) + ":ih*" + str(SCALE) +"\" " + "-map 0:0 " + frames_folder + "/" + output_name + "0_%04d." + EXTENSION
+        os.system(cmd)
+        cmd = "ffmpeg -ss " + str(START_TIME) + " -t " + str(DURATION) + " -i \"" + input_file + "\" -r " + str(FRAME_STEP) + " -vf scale=\"iw*" + str(SCALE) + ":ih*" + str(SCALE) +"\" " + "-map 0:1 " + frames_folder + "/" + output_name + "1_%04d." + EXTENSION
+        os.system(cmd)
+    else:
+        cmd = "ffmpeg -ss " + str(START_TIME) + " -t " + str(DURATION) + " -i \"" + input_file + "\" -r " + str(FRAME_STEP) + " -vf scale=\"iw*" + str(SCALE) + ":ih*" + str(SCALE) +"\" " + frames_folder + "/" + output_name + "%04d." + EXTENSION
+        os.system(cmd)
     #print(cmd)
 
     copyEXIFFromVideo(input_file, output_name, frames_folder)
@@ -230,7 +242,7 @@ def main():
     start_time = timer()
 
     if not args.folder:
-        frames_folder = os.path.basename(args.input_video)
+        frames_folder = os.path.basename(args.input_video) + "_frames"
     else:
         frames_folder = args.folder
 
@@ -243,7 +255,7 @@ def main():
         print("Skipping extraction stage")
     else:
         print("Extracting frames...")
-        extractFrames(args.input_video, frame_prefix, frames_folder, args.frameScale)
+        extractFrames(args.input_video, frame_prefix, frames_folder, args.frameScale, args.fps)
     #removeBlurredImages(getFramesInFolder(frames_folder))
     #removeSimilarImages(getFramesInFolder(frames_folder))
 
