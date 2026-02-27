@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-sudo apt install exiftool ffmpeg
+sudo apt install exiftool ffmpeg imagemagick
 
 if [ ! -d venv ]; then
   python -m venv venv
